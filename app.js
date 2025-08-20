@@ -13,7 +13,7 @@ const uploadLabel = document.getElementById('uploadLabel');
 const btnRotate = document.getElementById('btn-rotate');
 const btnFit = document.getElementById('btn-fit');
 const btnCenter = document.getElementById('btn-center');
-const btnTilt = document.getElementById('btn-tilt'); // optional Tilt button if present
+const btnTilt = document.getElementById('btn-tilt'); // optional if present
 
 const joyUp = document.getElementById('joy-up');
 const joyDown = document.getElementById('joy-down');
@@ -47,7 +47,6 @@ let currentObjectURL = null;
 
 // Interaction polish state
 const canvasWrap = document.querySelector('.canvas-wrap');
-let glowTimer = null;
 
 // Gyro state (optional)
 let tiltActive = false;
@@ -70,91 +69,12 @@ function haptic(ms = 10){
   if (navigator.vibrate) navigator.vibrate(ms);
 }
 
-// Frame glow toggle
-function glowPulse(duration = 250){
-  if (!canvasWrap) return;
-  canvasWrap.classList.add('glow');
-  clearTimeout(glowTimer);
-  glowTimer = setTimeout(()=>canvasWrap.classList.remove('glow'), duration);
+// Press-to-glow: ON during active drag/press, OFF when released
+function glowOn(){
+  canvasWrap?.classList.add('glow');
 }
-
-// Confetti overlay helpers (robust)
-function getCanvasPixelSize() {
-  return { w: canvas.width, h: canvas.height };
-}
-function ensureConfettiOverlay() {
-  let overlay = document.getElementById('confettiOverlay');
-  if (!overlay){
-    overlay = document.createElement('canvas');
-    overlay.id = 'confettiOverlay';
-    overlay.style.position = 'absolute';
-    overlay.style.inset = '0';
-    overlay.style.pointerEvents = 'none';
-    overlay.style.zIndex = '4'; // above frame (2) and hint (3)
-    const wrap = canvas.closest('.canvas-wrap') || canvas.parentElement;
-    wrap.appendChild(overlay);
-  }
-  const { w, h } = getCanvasPixelSize();
-  if (overlay.width !== w) overlay.width = w;
-  if (overlay.height !== h) overlay.height = h;
-  return overlay;
-}
-function confettiBurst(x = canvas.width - 80, y = 80, count = 20) {
-  const overlay = ensureConfettiOverlay();
-  const octx = overlay.getContext('2d');
-
-  const particles = [];
-  for (let i = 0; i < count; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const speed = 3 + Math.random() * 4;
-    particles.push({
-      x, y,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed - 2,
-      g: 0.12 + Math.random() * 0.08,
-      life: 30 + Math.random() * 20,
-      color: `hsl(${Math.floor(Math.random() * 360)},90%,60%)`,
-      size: 3 + Math.random() * 3,
-      rot: Math.random() * Math.PI,
-      vr: (Math.random() - 0.5) * 0.2
-    });
-  }
-
-  let frames = 0;
-  function step() {
-    const { w, h } = getCanvasPixelSize();
-    if (overlay.width !== w || overlay.height !== h) {
-      overlay.width = w;
-      overlay.height = h;
-    }
-    octx.clearRect(0, 0, overlay.width, overlay.height);
-
-    particles.forEach(p => {
-      p.vy += p.g;
-      p.x += p.vx;
-      p.y += p.vy;
-      p.rot += p.vr;
-      p.life--;
-      octx.save();
-      octx.translate(p.x, p.y);
-      octx.rotate(p.rot);
-      octx.fillStyle = p.color;
-      octx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
-      octx.restore();
-    });
-
-    for (let i = particles.length - 1; i >= 0; i--) {
-      if (particles[i].life <= 0 || particles[i].y > overlay.height + 40) particles.splice(i, 1);
-    }
-
-    frames++;
-    if (particles.length && frames < 120) {
-      requestAnimationFrame(step);
-    } else {
-      octx.clearRect(0, 0, overlay.width, overlay.height);
-    }
-  }
-  step();
+function glowOff(){
+  canvasWrap?.classList.remove('glow');
 }
 
 // Fits media to fully COVER the rect (may crop)
@@ -270,14 +190,11 @@ function fitToCutout(syncSlider = true){
   const w = imgSrc.naturalWidth, h = imgSrc.naturalHeight;
   if (!(w && h)) return;
 
-  // Swap W/H for fitting if rotated 90/270 (coverage calc)
   const mw = isRightAngle() ? h : w;
   const mh = isRightAngle() ? w : h;
 
   const fit = fitCoverToRect(mw, mh, CUTOUT.w, CUTOUT.h);
   setScale(fit.scale, syncSlider);
-
-  // Center the actual drawn image in the cutout
   centerInCutout();
 }
 
@@ -335,7 +252,7 @@ fileInput.addEventListener('change', async () => {
   imgSrc.src = url;
 });
 
-// Drag (delta-based; no jump)
+// Drag (delta-based; no jump) + press-to-glow behavior
 function setDraggingCursor(on){
   document.body.style.userSelect = on ? 'none' : '';
   document.body.style.webkitUserSelect = on ? 'none' : '';
@@ -350,7 +267,7 @@ canvas.addEventListener('mousedown', (e) => {
   dragStartPosX = posX;
   dragStartPosY = posY;
   setDraggingCursor(true);
-  glowPulse(220);
+  glowOn();
 });
 
 canvas.addEventListener('mousemove', (e) => {
@@ -361,9 +278,13 @@ canvas.addEventListener('mousemove', (e) => {
   drawFrame();
 });
 
-window.addEventListener('mouseup', () => { isDragging = false; setDraggingCursor(false); });
+window.addEventListener('mouseup', () => {
+  isDragging = false;
+  setDraggingCursor(false);
+  glowOff();
+});
 
-// Touch drag
+// Touch drag + press-to-glow
 canvas.addEventListener('touchstart', (e) => {
   if (!mediaLoaded || !e.touches || e.touches.length !== 1) return;
   const t = e.touches[0];
@@ -373,7 +294,7 @@ canvas.addEventListener('touchstart', (e) => {
   dragStartCanvasY = p.y;
   dragStartPosX = posX;
   dragStartPosY = posY;
-  glowPulse(220);
+  glowOn();
   e.preventDefault();
 }, { passive:false });
 
@@ -387,8 +308,8 @@ canvas.addEventListener('touchmove', (e) => {
   drawFrame();
 }, { passive:false });
 
-canvas.addEventListener('touchend',   (e)=>{ isDragging = false; e.preventDefault(); }, { passive:false });
-canvas.addEventListener('touchcancel',(e)=>{ isDragging = false; e.preventDefault(); }, { passive:false });
+canvas.addEventListener('touchend',   (e)=>{ isDragging = false; glowOff(); e.preventDefault(); }, { passive:false });
+canvas.addEventListener('touchcancel',(e)=>{ isDragging = false; glowOff(); e.preventDefault(); }, { passive:false });
 
 // Zoom (slider) — centered
 scaleSlider.addEventListener('input', (e) => {
@@ -412,7 +333,6 @@ btnRotate?.addEventListener('click', () => {
   fitToCutout(true);
   setRotateAria();
   haptic(12);
-  glowPulse(260);
 });
 
 // Fit / Center buttons
@@ -420,14 +340,12 @@ btnFit?.addEventListener('click', () => {
   if (!mediaLoaded) return;
   fitToCutout(true);
   haptic(8);
-  glowPulse(220);
 });
 
 btnCenter?.addEventListener('click', () => {
   if (!mediaLoaded) return;
   centerInCutout();
   haptic(6);
-  glowPulse(200);
 });
 
 // Joystick
@@ -485,7 +403,6 @@ if (joyCenter) {
     joy.speed = joy.speed === 1 ? 2 : joy.speed === 2 ? 4 : 1;
     joyCenter.textContent = joy.speed === 1 ? '●' : (joy.speed === 2 ? '●●' : '●●●');
     haptic(8);
-    glowPulse(160);
   });
 }
 
@@ -512,7 +429,6 @@ window.addEventListener('keydown', (e) => {
   }
 
   if (handled){
-    glowPulse(160);
     e.preventDefault();
   }
 });
@@ -523,7 +439,6 @@ function toggleZoom(){
   const w = imgSrc.naturalWidth, h = imgSrc.naturalHeight;
   if (!(w && h)) return;
 
-  // Compute fit scale for current orientation to the cutout
   const mw = isRightAngle() ? h : w;
   const mh = isRightAngle() ? w : h;
   const fit = fitCoverToRect(mw, mh, CUTOUT.w, CUTOUT.h);
@@ -534,7 +449,6 @@ function toggleZoom(){
     : Math.min(fitScale * 2, parseFloat(scaleSlider.max) || 3);
 
   zoomFromCenter(target);
-  glowPulse(160);
 }
 
 let lastTap = 0;
@@ -560,28 +474,26 @@ async function exportImage(){
   a.href = url; a.download = 'framed-image.jpg'; a.click();
 }
 
-// Download with confetti + haptic
+// Download
 downloadBtn.addEventListener('click', async () => {
   if (!mediaLoaded) { showMsg('Please upload an image first.'); return; }
   downloadBtn.disabled = true;
   try {
     await exportImage();
     haptic(15);
-    confettiBurst(canvas.width - 80, 80, 22);
   } finally {
     downloadBtn.disabled = false;
   }
 });
 
-// Clear (reset everything) with haptic
+// Clear (reset everything)
 clearBtn?.addEventListener('click', () => {
   fileInput.value = '';
   resetMedia();
   haptic(6);
-  glowPulse(140);
 });
 
-// Gyro tilt-to-pan (optional, off by default; requires a button with id="btn-tilt")
+// Gyro tilt-to-pan (optional, off by default)
 function applyTilt(gamma, beta){
   if (!mediaLoaded) return;
   const sensX = 0.35; // left/right tilt sensitivity
@@ -632,14 +544,12 @@ btnTilt?.addEventListener('click', async () => {
     btnTilt.setAttribute('aria-pressed','true');
     btnTilt.textContent = 'Tilt On';
     haptic(8);
-    glowPulse(180);
     disableTiltListener = enableTilt();
   } else {
     tiltActive = false;
     btnTilt.setAttribute('aria-pressed','false');
     btnTilt.textContent = 'Tilt';
     haptic(4);
-    glowPulse(120);
     if (disableTiltListener) disableTiltListener();
     disableTiltListener = null;
     centerInCutout();
