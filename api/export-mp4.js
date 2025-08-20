@@ -1,4 +1,3 @@
-// api/export-mp4.js
 import { IncomingForm } from 'formidable';
 import fs from 'fs';
 import path from 'path';
@@ -11,9 +10,11 @@ export const config = { api: { bodyParser: false } };
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') { res.status(405).send('Method Not Allowed'); return; }
+
   try {
     const { fields, files } = await parseForm(req);
     const params = JSON.parse(fields.params || '{}');
+
     const vid = files.video;
     const videoFile = Array.isArray(vid) ? vid[0] : vid;
     if (!videoFile) { res.status(400).send('No video file'); return; }
@@ -25,17 +26,16 @@ export default async function handler(req, res) {
     const srcPath = videoFile.filepath || videoFile.path || videoFile.tempFilePath;
     fs.copyFileSync(srcPath, inVideoPath);
 
-    const fr = await fetch(JSON.parse(fields.params).frameUrl);
+    const fr = await fetch(params.frameUrl);
     if (!fr.ok) { cleanup(); res.status(400).send('Could not fetch frame image: ' + fr.status); return; }
     fs.writeFileSync(framePath, Buffer.from(await fr.arrayBuffer()));
 
-    const p = JSON.parse(fields.params);
-    const canvasW = Math.round(Number(p.canvasW || 1080));
-    const canvasH = Math.round(Number(p.canvasH || 1350));
-    const scaleFactor = Number(p.scale || 1);
-    const posX = Math.round(Number(p.posX || 0));
-    const posY = Math.round(Number(p.posY || 0));
-    const rotationDeg = Number(p.rotationDeg || 0);
+    const canvasW = Math.round(Number(params.canvasW || 1080));
+    const canvasH = Math.round(Number(params.canvasH || 1350));
+    const scaleFactor = Number(params.scale || 1);
+    const posX = Math.round(Number(params.posX || 0));
+    const posY = Math.round(Number(params.posY || 0));
+    const rotationDeg = Number(params.rotationDeg || 0);
     const angleRad = ((rotationDeg % 360) * Math.PI) / 180;
 
     const filter =
@@ -75,15 +75,18 @@ export default async function handler(req, res) {
       }
     });
 
-    function cleanup(){
+    function cleanup() {
       try { fs.unlinkSync(inVideoPath); } catch {}
       try { fs.unlinkSync(framePath); } catch {}
       try { fs.rmdirSync(tmpDir); } catch {}
     }
-  } catch (e) { console.error(e); res.status(500).send('Server error'); }
+  } catch (e) {
+    console.error(e);
+    res.status(500).send('Server error');
+  }
 }
 
-function parseForm(req){
+function parseForm(req) {
   return new Promise((resolve, reject) => {
     const form = new IncomingForm({ multiples: false, keepExtensions: true });
     form.parse(req, (err, fields, files) => err ? reject(err) : resolve({ fields, files }));
