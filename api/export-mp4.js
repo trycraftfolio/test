@@ -1,3 +1,7 @@
+// api/export-mp4.js
+// H.264 MP4 export using ffmpeg on Vercel (Node 20).
+// Requires package.json at repo root with deps: formidable, node-fetch, @ffmpeg-installer/ffmpeg
+
 import { IncomingForm } from 'formidable';
 import fs from 'fs';
 import path from 'path';
@@ -9,32 +13,47 @@ import ffmpegPath from '@ffmpeg-installer/ffmpeg';
 export const config = { api: { bodyParser: false } };
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') { res.status(405).send('Method Not Allowed'); return; }
+  if (req.method !== 'POST') {
+    res.status(405).send('Method Not Allowed');
+    return;
+  }
+
   try {
     const { fields, files } = await parseForm(req);
     const params = JSON.parse(fields.params || '{}');
     const vid = files.video;
     const videoFile = Array.isArray(vid) ? vid[0] : vid;
-    if (!videoFile) { res.status(400).send('No video file'); return; }
+    if (!videoFile) {
+      res.status(400).send('No video file');
+      return;
+    }
 
+    // Temp workspace
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vercel-vid-'));
     const inVideoPath = path.join(tmpDir, 'in.mp4');
     const framePath = path.join(tmpDir, 'frame.png');
 
+    // Move uploaded video to temp
     const srcPath = videoFile.filepath || videoFile.path || videoFile.tempFilePath;
     fs.copyFileSync(srcPath, inVideoPath);
 
-    const fr = await fetch(JSON.parse(fields.params).frameUrl);
-    if (!fr.ok) { cleanup(); res.status(400).send('Could not fetch frame image: ' + fr.status); return; }
+    // Fetch frame image to temp
+    const frameUrl = params.frameUrl;
+    const fr = await fetch(frameUrl);
+    if (!fr.ok) {
+      cleanup();
+      res.status(400).send('Could not fetch frame image: ' + fr.status);
+      return;
+    }
     fs.writeFileSync(framePath, Buffer.from(await fr.arrayBuffer()));
 
-    const p = JSON.parse(fields.params);
-    const canvasW = Math.round(Number(p.canvasW || 1080));
-    const canvasH = Math.round(Number(p.canvasH || 1350));
-    const scaleFactor = Number(p.scale || 1);
-    const posX = Math.round(Number(p.posX || 0));
-    const posY = Math.round(Number(p.posY || 0));
-    const rotationDeg = Number(p.rotationDeg || 0);
+    // Transform params
+    const canvasW = Math.round(Number(params.canvasW || 1080));
+    const canvasH = Math.round(Number(params.canvasH || 1350));
+    const scaleFactor = Number(params.scale || 1);
+    const posX = Math.round(Number(params.posX || 0));
+    const posY = Math.round(Number(params.posY || 0));
+    const rotationDeg = Number(params.rotationDeg || 0);
     const angleRad = ((rotationDeg % 360) * Math.PI) / 180;
 
     const filter =
@@ -59,14 +78,19 @@ export default async function handler(req, res) {
     ];
 
     const ff = spawn(ffmpegPath.path, args);
-    res.setHeader('Content-Type', 'video/mp4');
-    res.setHeader('Cache-Control', 'no-store');
     let stderr = '';
     ff.stderr.on('data', d => { stderr += d.toString(); });
+
+    res.setHeader('Content-Type', 'video/mp4');
+    res.setHeader('Cache-Control', 'no-store');
     ff.stdout.pipe(res);
+
     ff.on('close', code => {
       cleanup();
-      if (code !== 0) { try { if (!res.headersSent) res.status(500).send('ffmpeg failed'); } catch {} console.error(stderr); }
+      if (code !== 0) {
+        try { if (!res.headersSent) res.status(500).send('ffmpeg failed'); } catch {}
+        console.error(stderr);
+      }
     });
 
     function cleanup(){
@@ -74,7 +98,10 @@ export default async function handler(req, res) {
       try { fs.unlinkSync(framePath); } catch {}
       try { fs.rmdirSync(tmpDir); } catch {}
     }
-  } catch (e) { console.error(e); res.status(500).send('Server error'); }
+  } catch (e) {
+    console.error(e);
+    res.status(500).send('Server error');
+  }
 }
 
 function parseForm(req){
