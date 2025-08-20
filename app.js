@@ -638,11 +638,11 @@ btnTilt?.addEventListener('click', async () => {
     return {
       x: Math.random() * w,
       y: Math.random() * h,
-      vx: (Math.random() - 0.5) * 0.25,
-      vy: (Math.random() - 0.5) * 0.25,
-      r: 0.8 + Math.random() * 1.8,
+      vx: (Math.random() - 0.5) * 1,
+      vy: (Math.random() - 0.5) * 1,
+      r: 0.8 + Math.random() * 0.5,
       hue: (Math.random() * 360) | 0,
-      a: 0.45 + Math.random() * 0.35
+      a: 0.45 + Math.random() * 5.35
     };
   }
 
@@ -665,7 +665,7 @@ btnTilt?.addEventListener('click', async () => {
       if (p.x < -10) p.x = fx.width + 10; else if (p.x > fx.width + 10) p.x = -10;
       if (p.y < -10) p.y = fx.height + 10; else if (p.y > fx.height + 10) p.y = -10;
 
-      ctx.fillStyle = `hsla(${p.hue},50%,80%,${p.a})`;
+      ctx.fillStyle = `hsla(${p.hue},30%,80%,${p.a})`;
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
       ctx.fill();
