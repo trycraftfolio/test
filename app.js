@@ -641,7 +641,7 @@ btnTilt?.addEventListener('click', async () => {
       vx: (Math.random() - 0.5) * 1,
       vy: (Math.random() - 0.5) * 1,
       r: 0.8 + Math.random() * 0.5,
-      hue: (Math.random() * 360) | 0,
+      hue: (Math.random() * 360) | 10,
       a: 0.45 + Math.random() * 5.35
     };
   }
