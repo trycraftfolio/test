@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Galaxy A17 5G — Event Frame</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="page-wrap">
+    <header class="site-header">
+      <h1 class="brand-title">Galaxy A17 5G — Event Frame</h1>
+    </header>
+
+    <main class="content">
+      <section class="stage-card" aria-label="Photo/Video stage">
+        <div class="canvas-wrap">
+          <canvas id="photoCanvas" width="1080" height="1350" aria-label="Canvas"></canvas>
+
+          <!-- IMPORTANT: Keep frame.png at ./assets/frame.png -->
+          <img id="frame" src="assets/frame.png" alt="Frame overlay" />
+
+          <!-- Hidden sources -->
+          <img id="sourceImage" alt="source image">
+          <video id="sourceVideo" playsinline muted loop></video>
+
+          <!-- Frame load hint -->
+          <div id="frameHint" class="frame-hint">Loading frame…</div>
+        </div>
+
+        <div class="controls">
+          <div class="sliders">
+            <label class="slider-row" for="scaleRange">
+              <span>Zoom</span>
+              <input type="range" id="scaleRange" min="0.3" max="3" value="1" step="0.01" />
+            </label>
+          </div>
+
+          <div class="rotate-row">
+            <button class="btn btn-ghost" data-rot="0"  type="button">Reset</button>
+            <button class="btn btn-ghost" data-rot="90" type="button">90°</button>
+            <button class="btn btn-ghost" data-rot="180" type="button">180°</button>
+            <button class="btn btn-ghost" data-rot="270" type="button">270°</button>
+          </div>
+
+          <div class="actions">
+            <label class="btn btn-upload">
+              <input id="fileInput" type="file" accept="image/*,video/*" />
+              <span>Upload Photo/Video</span>
+            </label>
+            <button id="downloadBtn" class="btn btn-primary" type="button">Download</button>
+          </div>
+
+          <p id="msg" class="msg" role="alert" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <aside class="tips">
+        <h3>Tips</h3>
+        <ul>
+          <li>Use portrait media. Drag to position, use Zoom and Rotate to adjust.</li>
+          <li>Video download is WebM on GitHub Pages (best on Chrome/Edge/Android).</li>
+        </ul>
+      </aside>
+    </main>
+
+    <footer class="site-footer">
+      <p>© 2025 Event Frame Demo</p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
