@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <title>Galaxy A17 5G — Event Frame</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon.png">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -17,15 +16,9 @@
       <section class="stage-card" aria-label="Photo/Video stage">
         <div class="canvas-wrap">
           <canvas id="photoCanvas" width="1080" height="1350" aria-label="Canvas"></canvas>
-
-          <!-- IMPORTANT: Keep frame.png at ./assets/frame.png -->
           <img id="frame" src="assets/frame.png" alt="Frame overlay" />
-
-          <!-- Hidden sources -->
-          <img id="sourceImage" alt="source image">
+          <img id="sourceImage" alt="source image" />
           <video id="sourceVideo" playsinline muted loop></video>
-
-          <!-- Frame load hint -->
           <div id="frameHint" class="frame-hint">Loading frame…</div>
         </div>
 
@@ -59,8 +52,9 @@
       <aside class="tips">
         <h3>Tips</h3>
         <ul>
-          <li>Use portrait media. Drag to position, use Zoom and Rotate to adjust.</li>
-          <li>Video download is WebM on GitHub Pages (best on Chrome/Edge/Android).</li>
+          <li>Use a portrait photo/video for best fit.</li>
+          <li>Drag to reposition; use Zoom and Rotate to adjust.</li>
+          <li>Video downloads as WebM; plays in Chrome, Edge, Firefox, Safari.</li>
         </ul>
       </aside>
     </main>
