@@ -9,14 +9,20 @@
 </head>
 <body>
   <div class="page-wrap">
+     <div class="fx-wrap">
+  <canvas id="particlesCanvas" aria-hidden="true"></canvas>
+</div>
     <header class="site-header">
       <h1 class="brand-title">Start your Galaxy Moment</h1>
     </header>
 
     <main class="content two-col">
+     
       <!-- Left: Stage -->
       <section class="stage-card" aria-label="Photo stage">
         <div class="canvas-wrap">
+          
+
           <canvas id="photoCanvas" width="1080" height="1350" aria-label="Canvas"></canvas>
 
           <!-- Frame overlay (decorative, now webp) -->
@@ -50,7 +56,6 @@
             <button class="btn btn-ghost" id="btn-fit" type="button" title="Fit to frame window">Fit</button>
             <button class="btn btn-ghost" id="btn-center" type="button" title="Center in window">Center</button>
             <button class="btn btn-ghost" id="btn-enhance" type="button" title="Auto enhance" aria-pressed="false">Enhance</button>
-
           </div>
 
           <!-- Zoom -->
@@ -64,7 +69,7 @@
           <!-- Actions -->
           <div class="actions">
             <label class="btn btn-upload">
-              <input id="fileInput" type="file" accept="image/*" />
+              <input id="fileInput" type="file" accept="image/*"  />
               <span id="uploadLabel">Upload Photo</span>
             </label>
             <button id="downloadBtn" class="btn btn-primary" type="button">Download</button>
@@ -93,5 +98,3 @@
   <script src="app.js" defer></script>
 </body>
 </html>
-
-
