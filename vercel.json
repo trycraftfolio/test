@@ -4,6 +4,9 @@
       "runtime": "nodejs20.x",
       "memory": 1024,
       "maxDuration": 60
+    },
+    "api/hello.js": {
+      "runtime": "nodejs20.x"
     }
   }
 }
