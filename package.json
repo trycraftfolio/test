@@ -1,10 +1,6 @@
 {
-  "name": "event-frame-export",
-  "private": true,
-  "type": "module",
   "dependencies": {
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
-    "formidable": "^3.5.0",
-    "node-fetch": "^3.3.2"
+    "formidable": "^3.5.0"
   }
 }
