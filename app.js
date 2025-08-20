@@ -611,4 +611,89 @@ btnTilt?.addEventListener('click', async () => {
   } catch {}
   hint && (hint.style.display = 'none');
   startLoop();
+
+  // Lightweight, mobile-friendly particle background
+(function initParticles(){
+  const fx = document.getElementById('particlesCanvas');
+  if (!fx) return;
+
+  const ctx = fx.getContext('2d', { alpha: true });
+  const DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+  function resize(){
+    const wrap = fx.parentElement; // .fx-wrap
+    const rect = wrap.getBoundingClientRect();
+    const w = Math.max(1, Math.floor(rect.width * DPR));
+    const h = Math.max(1, Math.floor(rect.height * DPR));
+    fx.width = w;
+    fx.height = h;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+  const COUNT = isMobile ? 90 : 180;
+
+  function spawn(w,h){
+    return {
+      x: Math.random() * w,
+      y: Math.random() * h,
+      vx: (Math.random() - 0.5) * 0.25,
+      vy: (Math.random() - 0.5) * 0.25,
+      r: 0.8 + Math.random() * 1.8,
+      hue: (Math.random() * 360) | 0,
+      a: 0.45 + Math.random() * 0.35
+    };
+  }
+
+  let particles = Array.from({ length: COUNT }, () => spawn(fx.width, fx.height));
+
+  // Pause when tab hidden (battery-friendly)
+  let running = true;
+  document.addEventListener('visibilitychange', () => {
+    running = document.visibilityState === 'visible';
+  });
+
+  function step(){
+    if (!running) { requestAnimationFrame(step); return; }
+    ctx.clearRect(0, 0, fx.width, fx.height);
+
+    for (let p of particles){
+      p.x += p.vx; p.y += p.vy;
+
+      // wrap-around edges
+      if (p.x < -10) p.x = fx.width + 10; else if (p.x > fx.width + 10) p.x = -10;
+      if (p.y < -10) p.y = fx.height + 10; else if (p.y > fx.height + 10) p.y = -10;
+
+      ctx.fillStyle = `hsla(${p.hue},50%,80%,${p.a})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+
+  // FPS guard: reduce particle count if FPS is low for a while
+  let last = performance.now(), frames = 0, accum = 0;
+  function fpsGuard(now){
+    const dt = now - last; last = now;
+    accum += dt; frames++;
+    if (accum >= 2000) {
+      const avg = accum / frames;
+      const fps = 1000 / avg;
+      if (fps < 45 && particles.length > 40) {
+        particles = particles.slice(0, Math.floor(particles.length * 0.7));
+      }
+      accum = 0; frames = 0;
+    }
+    requestAnimationFrame(fpsGuard);
+  }
+  requestAnimationFrame(fpsGuard);
+
+  // Respect reduced motion
+  const mq = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+  if (mq && mq.matches) particles = [];
+})();
+
 })();
