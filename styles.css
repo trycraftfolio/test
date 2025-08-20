@@ -221,14 +221,15 @@ input[type="range"]::-moz-range-thumb{
 }
 
 /* Visual polish: interactive glow on frame when manipulating */
+/* Interactive glow: stays ON only while pressing/dragging */
 .canvas-wrap.glow #frame {
   filter: drop-shadow(0 0 14px rgba(79,127,255,0.35))
           drop-shadow(0 0 24px rgba(38,210,255,0.25));
-  transition: filter .25s ease;
 }
 
-/* Joystick press feedback */
+/* Joystick press feedback (optional) */
 .joy-btn.is-active {
   transform: translateY(1px) scale(0.98);
   filter: brightness(1.12);
 }
+
