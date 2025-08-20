@@ -632,7 +632,7 @@ btnTilt?.addEventListener('click', async () => {
   window.addEventListener('resize', resize);
 
   const isMobile = /Mobi|Android/i.test(navigator.userAgent);
-  const COUNT = isMobile ? 90 : 180;
+  const COUNT = isMobile ? 90 : 500;
 
   function spawn(w,h){
     return {
