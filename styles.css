@@ -384,3 +384,15 @@ input[type="range"]::-moz-range-thumb{
   transform: translateY(1px) scale(0.98);
   filter: brightness(1.12);
 }
+/* Particles background behind the main canvas */
+.fx-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 0; /* photoCanvas z:1, frame z:2 */
+  pointer-events: none;
+}
+#particlesCanvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
