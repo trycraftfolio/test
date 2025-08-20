@@ -12,6 +12,10 @@ const rotateButtons = document.querySelectorAll('.rotate-row .btn-ghost');
 const imgSrc = document.getElementById('sourceImage');
 const videoSrc = document.getElementById('sourceVideo');
 
+// Backend encoder (Vercel) — replace with your deployed URL
+// Example: https://event-frame-export.vercel.app/api/export-mp4
+const vercelUrl = 'https://YOUR-PROJECT.vercel.app/api/export-mp4';
+
 // Constants
 const CANVAS_W = canvas.width;   // 1080
 const CANVAS_H = canvas.height;  // 1350
@@ -56,6 +60,7 @@ function clampPosition(w, h){
 
 // Frame load hint
 (function initFrameHint(){
+  if (!frameHint) return;
   const ok = () => { frameHint.style.display = 'none'; };
   const fail = () => { frameHint.textContent = 'Frame not found: assets/frame.png'; frameHint.style.display = 'block'; };
   if (!frameImg.complete) {
@@ -188,7 +193,7 @@ fileInput.addEventListener('change', async (e) => {
   }
 });
 
-// Dragging
+// Dragging helpers
 function toCanvasPoint(clientX, clientY){
   const r = canvas.getBoundingClientRect();
   return {
@@ -225,13 +230,15 @@ canvas.addEventListener('mousemove', (e) => {
 canvas.addEventListener('touchstart', (e) => {
   if (!mediaLoaded || e.touches.length !== 1) return;
   isDragging = true;
-  const p = toCanvasPoint(e.touches.clientX, e.touches.clientY);
+  const t = e.touches[0];
+  const p = toCanvasPoint(t.clientX, t.clientY);
   dragStartX = p.x - posX;
   dragStartY = p.y - posY;
 }, { passive: true });
 canvas.addEventListener('touchmove', (e) => {
   if (!isDragging || e.touches.length !== 1) return;
-  const p = toCanvasPoint(e.touches.clientX, e.touches.clientY);
+  const t = e.touches[0];
+  const p = toCanvasPoint(t.clientX, t.clientY);
   posX = p.x - dragStartX;
   posY = p.y - dragStartY;
 
@@ -310,78 +317,51 @@ async function exportImageJpg(){
   const a = document.createElement('a'); a.href = url; a.download = 'galaxy_a17_5g_frame.jpg'; a.click();
 }
 
-// Export video → WebM (client-only on GitHub Pages), with rotation centered
-async function exportVideoWebM(){
-  const recW = 720;
-  const recH = Math.round(recW * (CANVAS_H / CANVAS_W)); // 900
-  const off = document.createElement('canvas');
-  off.width = recW; off.height = recH;
-  const octx = off.getContext('2d');
-
-  let running = true;
-  function drawOff(){
-    if (!running) return;
-
-    octx.clearRect(0, 0, recW, recH);
-    const sx = recW / CANVAS_W, sy = recH / CANVAS_H;
-
-    // Video rotated around center
-    const vw = videoSrc.videoWidth, vh = videoSrc.videoHeight;
-    if (vw && vh) {
-      const dw = vw * scale * sx;
-      const dh = vh * scale * sy;
-      const cx = (posX * sx) + dw/2;
-      const cy = (posY * sy) + dh/2;
-
-      octx.save();
-      octx.translate(cx, cy);
-      octx.rotate(rotationDeg * Math.PI / 180);
-      octx.drawImage(videoSrc, -dw/2, -dh/2, dw, dh);
-      octx.restore();
-    }
-    octx.drawImage(frameImg, 0, 0, recW, recH);
-
-    requestAnimationFrame(drawOff);
+// Send original video + transforms to Vercel and download full-length MP4
+async function exportVideoViaVercel() {
+  const file = document.getElementById('fileInput').files?.[0];
+  const frameEl = document.getElementById('frame');
+  if (!file || !file.type.startsWith('video/')) {
+    showMsg('Please select a video again.');
+    return;
   }
-  drawOff();
 
-  const mime = (MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9'
-               : MediaRecorder.isTypeSupported('video/webm;codecs=vp8') ? 'video/webm;codecs=vp8'
-               : 'video/webm');
+  const params = {
+    posX, posY, scale, rotationDeg,
+    canvasW: canvas.width, canvasH: canvas.height,
+    frameUrl: new URL(frameEl.src, location.href).href
+  };
 
-  const stream = off.captureStream(30);
-  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 4_000_000 });
-  const chunks = [];
-  rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
-  rec.start(200);
+  const form = new FormData();
+  form.append('video', file);
+  form.append('params', JSON.stringify(params));
 
-  // Record one loop or 6s by default
-  let dur = videoSrc.duration;
-  if (!isFinite(dur) || dur <= 0) dur = 6;
-  dur = Math.min(Math.max(dur, 2), 6);
+  showMsg('Processing video…');
+  const res = await fetch(vercelUrl, { method: 'POST', body: form });
+  if (!res.ok) {
+    showMsg('Server export failed.');
+    return;
+  }
 
-  await new Promise(res => setTimeout(res, dur * 1000));
-  running = false;
-  await new Promise(res => { rec.onstop = res; rec.stop(); });
-
-  const blob = new Blob(chunks, { type: mime });
+  const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = 'galaxy_a17_5g_frame.webm';
+  a.href = url; a.download = 'galaxy_a17_5g_frame.mp4';
   a.click();
   setTimeout(()=>URL.revokeObjectURL(url), 2000);
+  showMsg('');
 }
 
-// Download handler
+// Download handler (image → JPG, video → MP4 via Vercel)
 downloadBtn.addEventListener('click', async () => {
   if (!mediaLoaded) { showMsg('Upload a photo or video first.'); return; }
   showMsg('');
 
   if (mediaType === 'image') {
-    try { await exportImageJpg(); } catch (e) { console.error(e); showMsg('Image export failed.'); }
+    try { await exportImageJpg(); }
+    catch (e) { console.error(e); showMsg('Image export failed.'); }
   } else {
-    try { await videoSrc.play(); } catch {}
-    try { await exportVideoWebM(); }
-    catch (e) { console.error(e); showMsg('Video export failed in this browser. Try Chrome/Edge.'); }
+    try { await exportVideoViaVercel(); }
+    catch (e) { console.error(e); showMsg('Video export failed.'); }
   }
 });
