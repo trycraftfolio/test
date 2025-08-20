@@ -683,7 +683,7 @@ btnTilt?.addEventListener('click', async () => {
       const avg = accum / frames;
       const fps = 1000 / avg;
       if (fps < 45 && particles.length > 40) {
-        particles = particles.slice(0, Math.floor(particles.length * 2));
+        particles = particles.slice(0, Math.floor(particles.length * 50));
       }
       accum = 0; frames = 0;
     }
